@@ -730,9 +730,13 @@ class DynamoConfig:
         git_ref = self.hash if self.hash else "HEAD"
         checkout_cmd = f"git checkout {self.hash}" if self.hash else ""
 
-        # Original SGLang container path, UNCHANGED
+        # Original SGLang container path. Newer lmsysorg/sglang images no longer
+        # ship cargo on PATH, so bootstrap rust + maturin here (guards make this a
+        # no-op when the toolchain is already present).
         sglang = (
-            "apt-get update -qq && apt-get install -y -qq libclang-dev > /dev/null 2>&1 && "
+            "apt-get update -qq && apt-get install -y -qq libclang-dev curl protobuf-compiler > /dev/null 2>&1 && "
+            "if ! command -v cargo &>/dev/null; then curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable -q && source $HOME/.cargo/env; fi && "
+            "pip install --break-system-packages --force-reinstall --quiet maturin && "
             "cd /sgl-workspace/ && "
             "git clone https://github.com/ai-dynamo/dynamo.git && "
             "cd dynamo && "
